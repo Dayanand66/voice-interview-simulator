@@ -4,254 +4,504 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Voice Interview Simulator — Mechanical</title>
+<link rel="icon" href="data:;base64,iVBORw0KGgo=">
 <style>
-  :root{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;--bg:#f7fafc;--card:#fff;--accent:#2563eb}
-  body{margin:16px;background:var(--bg);color:#0f172a}
-  .wrap{max-width:820px;margin:0 auto}
+  :root{
+    --bg:#f7fafc; --card:#fff; --accent:#2563eb; --muted:#64748b;
+    --ok:#0b6b3a; --danger:#b91c1c;
+    font-family: Inter, system-ui, "Segoe UI", Roboto, Arial;
+  }
+  body{margin:18px;background:var(--bg);color:#0f172a}
+  .wrap{max-width:1000px;margin:0 auto}
   .card{background:var(--card);border-radius:12px;padding:18px;margin-bottom:12px;box-shadow:0 6px 18px rgba(2,6,23,0.06)}
   h1{margin:0 0 8px;font-size:20px}
+  .small{font-size:13px;color:var(--muted)}
   select,button,input,textarea{font-size:14px;padding:8px;border-radius:8px;border:1px solid #e6edf3}
   .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-  .big{padding:10px 14px;font-weight:600;background:var(--accent);color:white;border:none}
+  .big{padding:10px 14px;font-weight:700;background:var(--accent);color:white;border:none;border-radius:10px;cursor:pointer}
+  .outline{background:white;color:var(--accent);border:1px solid rgba(37,99,235,0.15);cursor:pointer}
   .secondary{background:#eef2ff;color:#1e293b;border:1px solid #dbeafe}
-  .info{font-size:13px;color:#334155;margin-top:6px}
-  .question{font-weight:700;margin-top:12px}
-  textarea{width:100%;min-height:84px;margin-top:8px}
-  .feedback{Padding:10px;border-radius:8px;margin-top:8px;background:#f1f5f9}
-  .score{font-size:18px;font-weight:700;color:#0b6b3a}
-  .small{font-size:13px;color:#475569}
   .row{display:flex;gap:8px;align-items:center}
+  .question{font-weight:700;margin-top:12px;font-size:16px}
+  textarea{width:100%;min-height:84px;margin-top:8px;border-radius:8px}
+  .feedback{padding:10px;border-radius:8px;margin-top:8px;background:#f1f5f9}
+  .score{font-size:18px;font-weight:700;color:var(--ok)}
+  .muted{color:var(--muted);font-size:13px}
+  .barwrap{height:10px;background:#e6eefc;border-radius:8px;overflow:hidden}
+  .bar{height:100%;background:linear-gradient(90deg,#60a5fa,#2563eb);width:0%}
+  .controls-right{margin-left:auto;display:flex;gap:8px}
+  .meta{display:flex;gap:12px;align-items:center;margin-top:8px}
+  .hintbox{background:#fff7ed;border:1px solid #ffedd5;padding:10px;border-radius:8px;color:#92400e}
+  .modal{position:fixed;left:0;top:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.5)}
+  .modal .panel{width:90%;max-width:760px;background:white;padding:16px;border-radius:12px}
+  .small-btn{padding:6px 10px;border-radius:8px;border:1px solid #e6edf3;background:white;cursor:pointer}
+  table{width:100%;border-collapse:collapse}
+  td,th{padding:6px;border-bottom:1px solid #f1f5f9;text-align:left}
+  .pill{padding:4px 8px;border-radius:999px;background:#f1f5f9;font-size:12px}
+  .danger{color:var(--danger)}
+  .ok{color:var(--ok)}
+  footer{margin-top:12px;color:var(--muted);font-size:13px}
+  @media (max-width:700px){ .controls{flex-direction:column} .controls-right{margin-left:0} }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>Voice Interview Simulator — Mechanical (3 companies)</h1>
-    <div class="small">Choose a company and press <strong>Start Interview</strong>. Use <strong>Record Answer</strong> to speak. Works offline in browser (no API keys).</div>
+    <h1>Voice Interview Simulator — Mechanical</h1>
+    <div class="small">Practice interviews for 3 companies with voice input. New: hints, timer, example answers, record playback & download.</div>
 
-    <div style="margin-top:12px" class="row">
-      <select id="companySelect">
-        <option value="Tata">Tata Motors (Automobile)</option>
-        <option value="Bosch">Bosch (Automation)</option>
-        <option value="Kirloskar">Kirloskar (Pumps & Fluid)</option>
-      </select>
-      <button id="startBtn" class="big">Start Interview</button>
-      <button id="restartBtn" class="secondary">Reset</button>
+    <div class="meta">
+      <div class="row">
+        <label class="muted">Company:</label>
+        <select id="companySelect">
+          <option value="Tata">Tata Motors</option>
+          <option value="Bosch">Bosch</option>
+          <option value="Kirloskar">Kirloskar</option>
+        </select>
+        <label class="muted">Questions:</label>
+        <select id="numSelect"><option value="5">5</option><option value="10">10</option></select>
+        <label><input type="checkbox" id="shuffleChk"> Shuffle</label>
+      </div>
+      <div class="controls-right">
+        <button id="startBtn" class="big">Start Interview</button>
+        <button id="resetBtn" class="outline">Reset</button>
+      </div>
     </div>
 
-    <div id="qaArea" style="display:none;margin-top:12px">
-      <div class="question" id="questionText">Question will appear here...</div>
-      <div class="controls">
-        <button id="speakBtn" class="secondary">🔊 Speak Question</button>
-        <button id="recBtn" class="big">🎙️ Record Answer</button>
-        <button id="stopRecBtn" class="secondary">⏹ Stop</button>
-        <button id="evalBtn" class="secondary">✅ Evaluate (manual)</button>
+    <div id="qaArea" style="display:none" class="card">
+      <div class="row">
+        <div class="question" id="questionText">Question text</div>
+        <div class="controls-right">
+          <button id="hintBtn" class="small-btn">Hint</button>
+          <button id="exampleBtn" class="small-btn">Example</button>
+          <button id="repeatBtn" class="small-btn">🔊 Repeat</button>
+          <button id="skipBtn" class="small-btn">⏭ Skip</button>
+        </div>
       </div>
 
-      <div class="info">Transcript (editable):</div>
-      <textarea id="transcript" placeholder="Transcript from mic will appear here — or type your answer and click Evaluate."></textarea>
+      <div class="meta">
+        <div style="flex:1">
+          <div class="barwrap" aria-hidden><div class="bar" id="timeBar"></div></div>
+          <div class="muted" id="timerText">Time left: 60s</div>
+        </div>
+        <div class="row">
+          <button id="recordBtn" class="big">🎙️ Record</button>
+          <button id="stopBtn" class="outline">⏹ Stop</button>
+          <button id="playRec" class="small-btn">Play</button>
+          <button id="dlRec" class="small-btn">Download</button>
+          <button id="evalBtn" class="small-btn">✅ Evaluate</button>
+        </div>
+      </div>
 
-      <div id="feedback" class="feedback small" style="display:none"></div>
-      <div style="margin-top:12px" id="progress" class="small"></div>
+      <div style="margin-top:10px">
+        <div class="muted">Transcript (editable):</div>
+        <textarea id="transcript"></textarea>
+      </div>
+
+      <div id="feedback" class="feedback" style="display:none"></div>
+      <div id="progress" class="muted" style="margin-top:8px"></div>
     </div>
 
     <div id="resultArea" style="display:none" class="card">
-      <div class="score" id="finalScore">Score: 0 / 0</div>
-      <div id="finalFeedback" class="small"></div>
-      <div style="margin-top:8px">
-        <button id="tryAgain" class="big">Practice Another Company</button>
+      <div class="row">
+        <div class="score" id="finalScore">Score: 0 / 0</div>
+        <div class="controls-right">
+          <button id="downloadSession" class="big">⬇️ Download Session</button>
+          <button id="practiceAgain" class="outline">Practice Another</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <h3 style="margin:0 0 8px 0">Detailed feedback</h3>
+        <div id="detailList"></div>
       </div>
     </div>
+
+  </div>
+
+  <footer>Tip: Use Chrome desktop for best speech recognition. If mic fails, type answers and press Evaluate.</footer>
+</div>
+
+<!-- Example modal -->
+<div id="modal" class="modal" role="dialog" aria-hidden="true">
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 id="modalTitle">Example answer</h3>
+      <button id="closeModal" class="small-btn">Close</button>
+    </div>
+    <div id="modalBody" style="margin-top:12px"></div>
   </div>
 </div>
 
 <script>
 /* ---------------------------
-  Simple client-side Interview App
-   - Uses SpeechSynthesis for TTS
-   - Uses WebkitSpeechRecognition for STT (Chrome)
-   - Keyword-based scoring
+  Interactive Voice Interview Simulator
+  - TTS: SpeechSynthesis
+  - STT: Web Speech API (SpeechRecognition / webkitSpeechRecognition)
+  - MediaRecorder to capture audio (playback & download)
+  - Keyword-based scoring (per question)
 ----------------------------*/
+
 const companies = {
-  "Tata":[
-    {q:"Tell me about yourself and why you want to join Tata Motors?", keys:["motivation","automotive","team","design"], max:2},
-    {q:"Explain the working principle of a 4-stroke SI engine.", keys:["intake","compression","power","exhaust"], max:3},
-    {q:"What is the function of a differential in automobiles?", keys:["torque","wheels","speed","corner"], max:2},
-    {q:"How do you select material for a car chassis? What factors are important?", keys:["strength","weight","fatigue","cost","stiffness"], max:3},
-    {q:"Where do you see yourself in 5 years working with Tata Motors?", keys:["goals","learning","leadership","projects"], max:2}
+  "Tata": [
+    {q:"Tell me about yourself and why you want to join Tata Motors?", keys:["motivation","automotive","team","design"], example:"I am a mechanical engineering student... I want to join Tata Motors because... (mention automotive interest, teamwork, projects).", max:2},
+    {q:"Explain the working principle of a 4-stroke SI engine.", keys:["intake","compression","power","exhaust"], example:"Four strokes: intake, compression, power, exhaust — intake draws mixture, compression compresses it, spark ignites, power stroke produces work, exhaust clears gases.", max:3},
+    {q:"What is the function of a differential in automobiles?", keys:["torque","wheels","speed","corner"], example:"Differential allows wheels to rotate at different speeds while distributing torque, important during cornering.", max:2},
+    {q:"How do you select material for a car chassis? What factors are important?", keys:["strength","weight","fatigue","cost","stiffness"], example:"Balance weight and strength; consider fatigue life, stiffness, manufacturability and cost.", max:3},
+    {q:"Where do you see yourself in 5 years at Tata Motors?", keys:["goals","learning","leadership","projects"], example:"I see myself leading design projects, improving skills in CAD and FEA, and contributing to product development.", max:2},
+    {q:"Describe the types of steels used in automotive chassis.", keys:["low carbon","alloy","high strength","mild"], example:"Commonly used: mild steel for ease, high strength low alloy steels for weight saving; properties depend on treatment.", max:2},
+    {q:"What is bending moment and shear force in beams?", keys:["bending","shear","moment","internal"], example:"Bending moment is internal moment causing bending; shear force is internal force causing shear across a section.", max:3},
+    {q:"Explain what fatigue failure is and one method to prevent it.", keys:["fatigue","cycles","crack","surface","shot peening"], example:"Fatigue is failure from repeated loading; prevention includes good design, surface treatments, shot peening, reducing stress concentrators.", max:3},
+    {q:"How does regenerative braking work in hybrid vehicles?", keys:["regenerative","braking","kinetic","battery","motor"], example:"Kinetic energy is converted to electrical by motor/generator and stored into battery during braking.", max:3},
+    {q:"What is the role of suspension in ride comfort and handling?", keys:["suspension","damping","spring","comfort","stability"], example:"Suspension isolates road shocks using springs and dampers and keeps tires in contact for handling.", max:3}
   ],
-  "Bosch":[
-    {q:"Introduce yourself and share one strength that makes you fit for Bosch.", keys:["automation","mechatronics","problem","solver","problem-solving"], max:2},
-    {q:"Explain the concept of mechatronics and its applications in manufacturing.", keys:["sensors","actuators","control","plc"], max:3},
-    {q:"What are PLCs, and why are they important in automation?", keys:["ladder","logic","control","reliability","i/o"], max:3},
-    {q:"What are the differences between hydraulic and pneumatic systems?", keys:["fluid","compressibility","force","speed","hydraulic","pneumatic"], max:3},
-    {q:"Why do you prefer Bosch over other automation companies?", keys:["innovation","quality","fit","projects","culture"], max:2}
+  "Bosch": [
+    {q:"Introduce yourself and share one strength that makes you fit for Bosch.", keys:["automation","mechatronics","problem","team"], example:"I have skills in sensors and controls, experience in small automation projects and strong problem solving.", max:2},
+    {q:"Explain the concept of mechatronics and its applications in manufacturing.", keys:["sensors","actuators","control","plc"], example:"Mechatronics integrates mechanical, electronic and software; used in robotic cells, pick-and-place, and smart machines.", max:3},
+    {q:"What are PLCs and why are they important in automation?", keys:["ladder","logic","control","i/o"], example:"PLC is programmable logic controller used to run reliable deterministic control in industrial environments.", max:3},
+    {q:"Differences between hydraulic and pneumatic systems?", keys:["fluid","compressibility","force","speed","hydraulic","pneumatic"], example:"Hydraulic uses incompressible fluid for high forces; pneumatic uses compressible air for speed but less force.", max:3},
+    {q:"Explain PID control briefly.", keys:["proportional","integral","derivative","error"], example:"PID uses P, I, D terms to reduce error, eliminate steady-state error and predict trend to stabilize response.", max:3},
+    {q:"What is Industry 4.0 and its key elements?", keys:["i4.0","iot","automation","data","analytics"], example:"Industry 4.0 uses IoT, data analytics, connected machines and automation for smart manufacturing.", max:3},
+    {q:"How do you size a stepper motor for a load?", keys:["torque","load","speed","acceleration","safety"], example:"Determine torque and speed requirements, include safety margin, consider driver current and supply voltage.", max:3},
+    {q:"Explain sensor types used for position sensing.", keys:["encoder","potentiometer","hall","inductive"], example:"Encoders (optical/magnetic), potentiometers and Hall sensors are common for position feedback.", max:2},
+    {q:"What is a servo motor and how is it different from a stepper motor?", keys:["feedback","encoder","stepper","precise","closed loop"], example:"Servo uses closed-loop feedback for position/speed control; stepper is open-loop stepping but simpler.", max:3},
+    {q:"Why is safety important in automation design (name one standard)?", keys:["safety","risk","iso","iec","standards"], example:"Safety reduces hazards; ISO/IEC standards and proper risk assessments and safety circuits protect operators.", max:2}
   ],
-  "Kirloskar":[
-    {q:"Give a short introduction and why you want to join Kirloskar.", keys:["pumps","fluid","manufacturing","motivation"], max:2},
-    {q:"Explain the working principle of a centrifugal pump.", keys:["impeller","centrifugal","pressure","volute","flow"], max:3},
-    {q:"What is cavitation? How can it be prevented in pumps?", keys:["vapor","bubbles","npsh","impeller","design"], max:3},
-    {q:"What are the differences between IC engines and gas turbines?", keys:["combustion","moving parts","efficiency","rpm","turbine","engine"], max:3},
-    {q:"If selected, how would you contribute to the company’s growth?", keys:["projects","learning","efficiency","teamwork","improve"], max:2}
+  "Kirloskar": [
+    {q:"Short intro & why join Kirloskar?", keys:["pumps","fluid","manufacturing","motivation"], example:"I like fluid machinery, pumps and rotating equipment and want to work on pump design and manufacturing.", max:2},
+    {q:"Explain the working principle of a centrifugal pump.", keys:["impeller","centrifugal","pressure","volute","flow"], example:"Impeller accelerates fluid radially by centrifugal force converting velocity to pressure in volute.", max:3},
+    {q:"What is cavitation and how to prevent it?", keys:["vapor","bubbles","npsh","impeller","design"], example:"Cavitation is vapor bubble formation causing damage; prevent via NPSH margin, impeller design, avoid suction restrictions.", max:3},
+    {q:"Differences between IC engines and gas turbines?", keys:["combustion","moving parts","efficiency","rpm","turbine"], example:"Gas turbines have continuous combustion and high rpm; IC engines are reciprocating with different efficiency profiles.", max:3},
+    {q:"How to select pump for a given application?", keys:["flow","head","efficiency","npsh","viscosity"], example:"Select based on required flow, head, fluid properties, efficiency and NPSH available.", max:3},
+    {q:"Explain affinity laws for pumps.", keys:["affinity","speed","flow","head","power"], example:"Flow ~ speed, Head ~ speed^2, Power ~ speed^3 — used to scale pump performance.", max:3},
+    {q:"What is specific speed of a pump?", keys:["specific","speed","impeller","design"], example:"Specific speed is a non-dimensional number describing pump geometry for performance categorization.", max:2},
+    {q:"How do you diagnose a pump running hot or vibrating?", keys:["vibration","alignment","bearing","imbalance","cavitation"], example:"Check alignment, impeller balance, bearings, cavitation and suction conditions.", max:3},
+    {q:"What materials are used for pump impellers and why?", keys:["cast iron","stainless","bronze","corrosion","erosion"], example:"Materials chosen for corrosion/erosion resistance: stainless, bronze, or coated alloys as per fluid.", max:2},
+    {q:"How do you improve pump efficiency in a system?", keys:["trim","impeller","speed","control","maintenance"], example:"Trim impeller, use variable speed drives, reduce losses in piping and maintain clearances.", max:3}
   ]
 };
 
-let company = null, qIndex = 0, score = 0, totalMax = 0;
+// state
+let currentList = [];
+let session = {company:'', questions:[], answers:[], score:0, total:0};
+let currentIndex = 0;
+let totalToAsk = 5;
+let recognition = null, recognizing=false;
+let mediaRecorder = null;
+let recordedBlobs = [];
+let currentAudioURL = null;
+let timer = null;
+let timeLeft = 60;
+const defaultTime = 60; // seconds
+
+// UI elements
 const companySelect = document.getElementById('companySelect');
 const startBtn = document.getElementById('startBtn');
-const restartBtn = document.getElementById('restartBtn');
+const resetBtn = document.getElementById('resetBtn');
 const qaArea = document.getElementById('qaArea');
 const questionText = document.getElementById('questionText');
-const recBtn = document.getElementById('recBtn');
-const stopRecBtn = document.getElementById('stopRecBtn');
-const speakBtn = document.getElementById('speakBtn');
+const hintBtn = document.getElementById('hintBtn');
+const exampleBtn = document.getElementById('exampleBtn');
+const repeatBtn = document.getElementById('repeatBtn');
+const skipBtn = document.getElementById('skipBtn');
+const recordBtn = document.getElementById('recordBtn');
+const stopBtn = document.getElementById('stopBtn');
+const playRec = document.getElementById('playRec');
+const dlRec = document.getElementById('dlRec');
+const evalBtn = document.getElementById('evalBtn');
 const transcriptEl = document.getElementById('transcript');
 const feedbackEl = document.getElementById('feedback');
-const evalBtn = document.getElementById('evalBtn');
 const progressEl = document.getElementById('progress');
+const timerText = document.getElementById('timerText');
+const timeBar = document.getElementById('timeBar');
 const resultArea = document.getElementById('resultArea');
-const finalScoreEl = document.getElementById('finalScore');
-const finalFeedbackEl = document.getElementById('finalFeedback');
-const tryAgain = document.getElementById('tryAgain');
+const finalScore = document.getElementById('finalScore');
+const detailList = document.getElementById('detailList');
+const downloadSession = document.getElementById('downloadSession');
+const practiceAgain = document.getElementById('practiceAgain');
+const numSelect = document.getElementById('numSelect');
+const shuffleChk = document.getElementById('shuffleChk');
+const modal = document.getElementById('modal');
+const modalBody = document.getElementById('modalBody');
+const modalTitle = document.getElementById('modalTitle');
+const closeModal = document.getElementById('closeModal');
 
 function speak(text){
-  if(!("speechSynthesis" in window)) return alert("TTS not supported in this browser.");
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'en-US';
+  if(!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-IN';
+  u.rate = 1;
   speechSynthesis.speak(u);
 }
 
-// STT: WebKitSpeechRecognition (Chrome)
-let recog = null, recognizing = false;
-if(('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window)){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recog = new SR();
-  recog.lang = 'en-IN';
-  recog.interimResults = false;
-  recog.maxAlternatives = 1;
-  recog.onstart = ()=>{recognizing = true; recBtn.textContent = "Recording..."; recBtn.disabled = true; stopRecBtn.disabled = false;}
-  recog.onend = ()=>{recognizing = false; recBtn.disabled = false; recBtn.textContent = "🎙️ Record Answer"; stopRecBtn.disabled = true;}
-  recog.onerror = (e)=>{console.log('STT error',e); recognizing=false; recBtn.disabled=false; stopRecBtn.disabled=true}
-  recog.onresult = (ev)=>{ const text = ev.results[0][0].transcript; transcriptEl.value = text; }
+/* init recognition if available */
+function initRecognition(){
+  if(('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window)){
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.lang = 'en-IN';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => { recognizing=true; recordBtn.textContent='Recording...'; recordBtn.disabled=true; stopBtn.disabled=false; };
+    recognition.onend = () => { recognizing=false; recordBtn.disabled=false; recordBtn.textContent='🎙️ Record'; stopBtn.disabled=true; };
+    recognition.onerror = (e)=>{ console.warn('STT error', e); recognizing=false; recordBtn.disabled=false; };
+    recognition.onresult = (ev)=>{ transcriptEl.value = ev.results[0][0].transcript || transcriptEl.value; };
+  } else {
+    recognition = null;
+  }
 }
 
-startBtn.onclick = ()=>{
-  company = companySelect.value;
-  qIndex = 0; score = 0; totalMax = 0;
-  qaArea.style.display = 'block';
-  resultArea.style.display = 'none';
-  feedbackEl.style.display = 'none';
-  transcriptEl.value = '';
-  loadQuestion();
-};
+/* MediaRecorder for audio capture */
+async function initRecorder(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return null;
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const options = {mimeType: 'audio/webm'};
+    mediaRecorder = new MediaRecorder(stream, options);
+    mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) recordedBlobs.push(e.data); };
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedBlobs, { type: 'audio/webm' });
+      if(currentAudioURL) URL.revokeObjectURL(currentAudioURL);
+      currentAudioURL = URL.createObjectURL(blob);
+      playRec.disabled = false; dlRec.disabled = false;
+      // store blob for session
+      session.answers[currentIndex].audioBlob = blob;
+    };
+    return mediaRecorder;
+  } catch(e){
+    console.warn('No mic permissions', e);
+    mediaRecorder = null;
+    return null;
+  }
+}
 
-restartBtn.onclick = resetAll;
-tryAgain.onclick = resetAll;
+function resetState(){
+  session = {company:'', questions:[], answers:[], score:0, total:0};
+  currentIndex = 0;
+  currentList = [];
+  recordedBlobs = [];
+  if(currentAudioURL){ URL.revokeObjectURL(currentAudioURL); currentAudioURL=null; }
+  qaArea.style.display='none'; resultArea.style.display='none';
+  feedbackEl.style.display='none'; transcriptEl.value=''; progressEl.textContent='';
+  clearTimer();
+}
 
-function resetAll(){
-  qaArea.style.display = 'none';
-  resultArea.style.display = 'none';
-  company=null; qIndex=0; score=0; totalMax=0;
+function startInterview(){
+  resetState();
+  const company = companySelect.value;
+  session.company = company;
+  // copy questions and maybe shuffle
+  currentList = companies[company].slice();
+  // choose number
+  totalToAsk = parseInt(numSelect.value,10) || 5;
+  if(shuffleChk.checked) currentList = shuffleArray(currentList);
+  currentList = currentList.slice(0, totalToAsk);
+  // prepare session slots
+  currentList.forEach(q=> session.questions.push({q:q.q, keys:q.keys, example:q.example, max:q.max}));
+  session.total = currentList.reduce((s,qi)=>s+qi.max,0);
+  // show first
+  qaArea.style.display='block';
+  loadQuestion(0);
+}
+
+function loadQuestion(index){
+  currentIndex = index;
+  const item = currentList[index];
+  questionText.textContent = `Q${index+1}. ${item.q}`;
   transcriptEl.value='';
   feedbackEl.style.display='none';
-  speechSynthesis.cancel();
-}
-
-function loadQuestion(){
-  const arr = companies[company];
-  if(qIndex >= arr.length){
-    finishInterview(); return;
-  }
-  const item = arr[qIndex];
-  questionText.textContent = `Q${qIndex+1}. ${item.q}`;
-  progressEl.textContent = `Question ${qIndex+1} of ${arr.length} — Current score: ${score}`;
-  // speak question
+  progressEl.textContent = `Question ${index+1} of ${totalToAsk}`;
+  // reset recorder buffers for this question
+  recordedBlobs = [];
+  if(session.answers[index] === undefined) session.answers[index] = {transcript:'', audioBlob:null, score:0, feedback:''};
+  // play question TTS
   speak(item.q);
-  // clear previous transcript & feedback
-  transcriptEl.value = '';
-  feedbackEl.style.display = 'none';
-  // compute total max
-  totalMax = arr.reduce((s,it)=>s+it.max,0);
+  // init timer
+  startTimer(defaultTime);
+  // disable play/download until recorded
+  playRec.disabled=true; dlRec.disabled=true;
 }
 
-recBtn.onclick = ()=>{
-  if(!recog) return alert("Speech Recognition not supported in this browser. Use Chrome or type your answer and press Evaluate.");
-  transcriptEl.value = '';
-  try{recog.start();}catch(e){console.warn(e); }
-};
-
-stopRecBtn.onclick = ()=>{
-  if(recog && recognizing){ recog.stop(); }
-};
-
-// Manual evaluate button
-evalBtn.onclick = () => evaluateAnswer(transcriptEl.value.trim());
-
-speakBtn.onclick = ()=> speak(questionText.textContent.replace(/^Q\d+\.\s*/,''));
-
-function evaluateAnswer(text){
-  if(!text) return alert("Please record or type your answer first.");
-  const arr = companies[company];
-  const item = arr[qIndex];
-  const ans = text.toLowerCase();
-  let qscore = 0;
-  // For each keyword, add fractional points; cap at item.max
-  const keys = item.keys;
-  let matched = 0;
-  for(const k of keys){
-    // handle synonyms or multi-word keys: check each token in k split by |
-    const parts = k.split('|').map(p=>p.trim());
-    for(const p of parts){
-      if(p && ans.includes(p)) { matched++; break; }
-    }
-  }
-  // score proportional to matched / keys.length * max
-  qscore = Math.round((matched / keys.length) * item.max);
-  // small bonus if answer length is long (encourages detail) — optional
-  if(ans.split(/\s+/).length > 25 && qscore < item.max) qscore = Math.min(item.max, qscore+1);
-
-  score += qscore;
-  // feedback generation
-  const missing = keys.filter(k=>{
-    const parts = k.split('|').map(p=>p.trim());
-    return !parts.some(p=>ans.includes(p));
-  });
-  let fb = `You scored ${qscore}/${item.max} on this question.`;
-  if(missing.length===0) fb += " Good — you covered all key points.";
-  else fb += ` Try to mention: ${missing.slice(0,4).join(', ')}.`;
-
-  feedbackEl.style.display = 'block';
-  feedbackEl.innerHTML = `<strong>Feedback:</strong> ${fb}`;
-  progressEl.textContent = `Answered Q${qIndex+1}. Score now: ${score} / ${totalMax}`;
-  // speak feedback
-  speak(fb);
-
-  // next question after a short delay
-  qIndex++;
-  setTimeout(()=> loadQuestion(), 1300);
-}
-
-function finishInterview(){
-  qaArea.style.display = 'none';
-  resultArea.style.display = 'block';
-  finalScoreEl.textContent = `Score: ${score} / ${totalMax}`;
-  let comment = '';
-  const percent = (totalMax>0)? Math.round((score/totalMax)*100) : 0;
-  if(percent>=80) comment = "Excellent performance — strong answers!";
-  else if(percent>=60) comment = "Good — a little more detail and you'll be ready.";
-  else if(percent>=40) comment = "Fair — practice improving technical depth.";
-  else comment = "Practice more: try to cover keywords and give structured answers.";
-
-  finalFeedbackEl.textContent = `${comment} (${percent}%) — Review the feedback for each question while practicing.`;
-  speak(`Interview finished. Your score is ${score} out of ${totalMax}. ${comment}`);
-}
-
-/* quick hotkeys for convenience */
-document.addEventListener('keydown',(e)=>{
-  if(e.key==='r' && qaArea.style.display!=='none') recBtn.click();
-  if(e.key==='s') stopRecBtn.click();
+hintBtn.addEventListener('click', ()=> {
+  const keys = currentList[currentIndex].keys || [];
+  showModal('Hint', `<div class="hintbox"><strong>Key points:</strong> ${keys.join(', ')}</div>`);
 });
-</script>
-</body>
-</html>
+
+exampleBtn.addEventListener('click', ()=> {
+  const ex = currentList[currentIndex].example || 'No example available';
+  showModal('Example Answer', `<div>${escapeHtml(ex)}</div>`);
+});
+
+repeatBtn.addEventListener('click', ()=> {
+  const q = currentList[currentIndex].q;
+  speak(q);
+});
+
+skipBtn.addEventListener('click', ()=> {
+  // mark zero and move next
+  stopRecordingIfAny();
+  session.answers[currentIndex].transcript = transcriptEl.value || '';
+  session.answers[currentIndex].score = 0;
+  session.answers[currentIndex].feedback = 'Skipped';
+  nextOrFinish();
+});
+
+/* Recording logic */
+recordBtn.addEventListener('click', async ()=> {
+  // start both recognition and media recorder
+  if(recognition){ try{ recognition.start(); } catch(e){ console.warn(e); } }
+  if(!mediaRecorder) await initRecorder();
+  if(mediaRecorder){ recordedBlobs = []; mediaRecorder.start(); }
+});
+
+stopBtn.addEventListener('click', ()=> {
+  stopRecordingIfAny();
+  // capture transcript into session slot
+  session.answers[currentIndex].transcript = transcriptEl.value.trim();
+});
+
+function stopRecordingIfAny(){
+  if(recognition && recognizing){ try{ recognition.stop(); }catch(e){/*ignore*/} }
+  if(mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+}
+
+/* play / download recorded audio */
+playRec.addEventListener('click', ()=> {
+  if(!currentAudioURL) return alert('No recording for this question');
+  const a = new Audio(currentAudioURL);
+  a.play();
+});
+dlRec.addEventListener('click', ()=> {
+  if(!session.answers[currentIndex].audioBlob) return alert('No recording to download');
+  const url = URL.createObjectURL(session.answers[currentIndex].audioBlob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `answer_q${currentIndex+1}.webm`; document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+
+/* Evaluate (keyword scoring) */
+evalBtn.addEventListener('click', ()=> {
+  const ansText = transcriptEl.value.trim();
+  if(!ansText) return alert('Please record or type your answer first.');
+  const item = currentList[currentIndex];
+  const ans = ansText.toLowerCase();
+  const keys = item.keys || [];
+  let matched = [];
+  for(const k of keys){
+    const parts = k.split('|').map(p=>p.trim());
+    for(const p of parts){ if(p && ans.includes(p)){ matched.push(p); break; } }
+  }
+  let qscore = Math.round((matched.length / keys.length) * item.max);
+  if(ans.split(/\s+/).length > 25 && qscore < item.max) qscore = Math.min(item.max, qscore+1);
+  // feedback
+  const missing = keys.filter(k=> !k.split('|').some(p=> ans.includes(p)));
+  const fb = `Scored ${qscore}/${item.max}. Missing: ${missing.join(', ') || 'None'}`;
+  feedbackEl.style.display='block';
+  feedbackEl.innerHTML = `<strong>Feedback:</strong> ${escapeHtml(fb)}`;
+  // store in session
+  session.answers[currentIndex].transcript = ansText;
+  session.answers[currentIndex].score = qscore;
+  session.answers[currentIndex].feedback = fb;
+  // update running total
+  session.score = session.answers.reduce((s,a)=>s+(a.score||0),0);
+  // speak short feedback
+  speak(`You scored ${qscore} out of ${item.max}.`);
+  // proceed next after short delay
+  setTimeout(()=> nextOrFinish(), 1100);
+});
+
+/* next question or finish */
+function nextOrFinish(){
+  clearTimer();
+  if(currentIndex+1 < totalToAsk){
+    loadQuestion(currentIndex+1);
+  } else {
+    finishInterview();
+  }
+}
+
+/* finish and show results */
+function finishInterview(){
+  qaArea.style.display='none';
+  resultArea.style.display='block';
+  session.score = session.answers.reduce((s,a)=>s+(a.score||0),0);
+  finalScore.textContent = `Score: ${session.score} / ${session.total}`;
+  // build detailed list
+  detailList.innerHTML = '';
+  session.answers.forEach((a,i)=>{
+    const q = session.questions[i];
+    const row = document.createElement('div');
+    row.innerHTML = `<div style="display:flex;justify-content:space-between"><div><strong>Q${i+1}.</strong> ${escapeHtml(q.q)}</div><div class="pill">${a.score || 0}/${q.max}</div></div>
+      <div class="muted" style="margin-top:6px"><strong>Transcript:</strong> ${escapeHtml(a.transcript || '')}</div>
+      <div style="margin-top:6px"><strong>Feedback:</strong> ${escapeHtml(a.feedback || '')}</div>`;
+    detailList.appendChild(row);
+  });
+  // speak summary
+  const percent = Math.round((session.score/session.total)*100 || 0);
+  const comment = percent>=80? 'Excellent': percent>=60? 'Good': percent>=40? 'Fair':'Needs practice';
+  speak(`Interview finished. Your score is ${session.score} out of ${session.total}. ${comment}`);
+}
+
+/* session download */
+downloadSession.addEventListener('click', ()=> {
+  const data = JSON.stringify(session, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download = 'session.json';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+});
+
+/* practice again */
+practiceAgain.addEventListener('click', ()=> {
+  resetState();
+  window.scrollTo(0,0);
+});
+
+/* timer utils */
+function startTimer(seconds){
+  clearTimer();
+  timeLeft = seconds;
+  timerText.textContent = `Time left: ${timeLeft}s`;
+  updateBar();
+  timer = setInterval(()=> {
+    timeLeft--;
+    if(timeLeft<=0){ clearInterval(timer); timer=null; timerExpired(); }
+    timerText.textContent = `Time left: ${timeLeft}s`;
+    updateBar();
+  }, 1000);
+}
+function updateBar(){
+  const pct = Math.max(0, Math.min(100, Math.round((timeLeft/defaultTime)*100)));
+  timeBar.style.width = pct + '%';
+}
+function clearTimer(){ if(timer){ clearInterval(timer); timer=null; } }
+function timerExpired(){
+  speak('Time is up for this question.');
+  // auto-evaluate whatever transcript exists
+  evalBtn.click();
+}
+
+/* utilities */
+function shuffleArray(a){ const b = a.slice(); for(let i=b.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [b[i],b[j]]=[b[j],b[i]] } return b; }
+function escapeHtml(s){ if(!s) return ''; return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+/* modal */
+function showModal(title, html){
+  modalTitle.textContent = title;
+  modalBody.innerHTML = html;
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden','false');
+}
+closeModal.addEventListener('click', ()=> { modal.style.display='none'; modal.setAttribute('aria-hidden','true'); });
+
+/* startup */
+initRecognition();
+initRecorder();
+
+/* wire main controls */
+startBtn.addEventListener('click', ()=> {
+  startInterview();
+  session.company = companySelect.value;
+});
+resetBtn.addEventListener('click', ()=> { if(confirm('Reset current progress?')) resetState(); });
