@@ -3,254 +3,512 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Voice Interview Simulator — Mechanical</title>
+<title>Voice Interview Simulator — Mechanical (AI look)</title>
+<link rel="icon" href="data:;base64,iVBORw0KGgo=">
 <style>
-  :root{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;--bg:#f7fafc;--card:#fff;--accent:#2563eb}
-  body{margin:16px;background:var(--bg);color:#0f172a}
-  .wrap{max-width:820px;margin:0 auto}
-  .card{background:var(--card);border-radius:12px;padding:18px;margin-bottom:12px;box-shadow:0 6px 18px rgba(2,6,23,0.06)}
-  h1{margin:0 0 8px;font-size:20px}
-  select,button,input,textarea{font-size:14px;padding:8px;border-radius:8px;border:1px solid #e6edf3}
-  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-  .big{padding:10px 14px;font-weight:600;background:var(--accent);color:white;border:none}
-  .secondary{background:#eef2ff;color:#1e293b;border:1px solid #dbeafe}
-  .info{font-size:13px;color:#334155;margin-top:6px}
-  .question{font-weight:700;margin-top:12px}
-  textarea{width:100%;min-height:84px;margin-top:8px}
-  .feedback{Padding:10px;border-radius:8px;margin-top:8px;background:#f1f5f9}
-  .score{font-size:18px;font-weight:700;color:#0b6b3a}
-  .small{font-size:13px;color:#475569}
-  .row{display:flex;gap:8px;align-items:center}
+  /* ====== AI-style animated background & theme ====== */
+  :root{
+    --bg1: #081229;
+    --bg2: #07102a;
+    --glass: rgba(255,255,255,0.06);
+    --card: rgba(255,255,255,0.04);
+    --muted: rgba(255,255,255,0.65);
+    --accent: #5ee3ff;
+    --accent2: #6b5cff;
+    --success: #7ee787;
+    --danger: #ff6b6b;
+    --glass-border: rgba(255,255,255,0.06);
+    font-family: Inter, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+
+  html,body{height:100%}
+  body{
+    margin:0;
+    min-height:100%;
+    background: linear-gradient(135deg, rgba(6,10,25,1) 0%, rgba(8,12,40,1) 50%, rgba(14,8,40,1) 100%);
+    color: #e6eef8;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    overflow-y:auto;
+  }
+
+  /* animated gradient overlay */
+  .bg-anim{
+    position:fixed;inset:0;z-index:-3;pointer-events:none;mix-blend-mode:screen;
+    background: radial-gradient(800px 400px at 10% 20%, rgba(95,227,255,0.07), transparent 8%),
+                radial-gradient(700px 350px at 85% 60%, rgba(107,92,255,0.06), transparent 8%);
+    animation: drift 18s linear infinite alternate;
+  }
+  @keyframes drift{
+    0%{transform:translate3d(0,0,0) rotate(0deg)}
+    50%{transform:translate3d(20px,-18px,0) rotate(3deg)}
+    100%{transform:translate3d(-10px,12px,0) rotate(-2deg)}
+  }
+
+  /* floating blobs */
+  .blob {
+    position:fixed; border-radius:50%; filter:blur(36px); opacity:0.55; z-index:-2; pointer-events:none;
+    mix-blend-mode:screen;
+  }
+  .blob.b1{width:520px;height:520px;left:-80px;top:-120px;background:linear-gradient(90deg,#5ee3ff,#6b5cff); animation: floatA 16s ease-in-out infinite;}
+  .blob.b2{width:420px;height:420px;right:-120px;top:40px;background:linear-gradient(90deg,#6b5cff,#ff6bf0); animation: floatB 20s ease-in-out infinite;}
+  .blob.b3{width:340px;height:340px;left:15%;bottom:-140px;background:linear-gradient(90deg,#00ffd2,#60a5fa); animation: floatC 18s ease-in-out infinite;}
+  @keyframes floatA{0%{transform:translateY(0)}50%{transform:translateY(28px) rotate(6deg)}100%{transform:translateY(0)}}
+  @keyframes floatB{0%{transform:translateY(0)}50%{transform:translateY(-22px) rotate(-4deg)}100%{transform:translateY(0)}}
+  @keyframes floatC{0%{transform:translateY(0)}50%{transform:translateY(18px) rotate(3deg)}100%{transform:translateY(0)}}
+
+  /* page layout */
+  .wrap{
+    max-width:1060px;
+    margin:36px auto;
+    padding:28px;
+  }
+
+  /* glass card */
+  .card{
+    background: var(--card);
+    border-radius:14px;
+    padding:18px;
+    box-shadow: 0 10px 40px rgba(3,8,21,0.55);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(8px) saturate(120%);
+    -webkit-backdrop-filter: blur(8px) saturate(120%);
+    color: #e8f3ff;
+  }
+
+  header{display:flex;gap:12px;align-items:center}
+  h1{margin:0;font-size:20px;letter-spacing:0.2px}
+  .sub{color:var(--muted);font-size:13px;margin-top:6px}
+  .muted{color:var(--muted);font-size:13px}
+
+  /* controls */
+  .row{display:flex;gap:10px;align-items:center}
+  select, textarea, input{background:transparent;color:inherit;border:1px solid rgba(255,255,255,0.06);padding:8px;border-radius:10px;outline:none}
+  textarea{min-height:80px;resize:vertical}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;border:none;cursor:pointer;font-weight:700;
+    background: linear-gradient(90deg,var(--accent),var(--accent2)); color:#032230; box-shadow: 0 6px 18px rgba(91,163,255,0.08);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .btn:hover{transform:translateY(-3px);box-shadow: 0 12px 30px rgba(91,163,255,0.12)}
+  .btn.ghost{
+    background:transparent;color:var(--accent);border:1px solid rgba(94,227,255,0.12); box-shadow:none;font-weight:600;
+  }
+  .pill{background:rgba(255,255,255,0.03);padding:6px 10px;border-radius:999px;font-weight:700;color:var(--accent);}
+
+  /* qa UI */
+  .qa-top{display:flex;align-items:center;gap:12px}
+  .question{font-weight:800;font-size:16px}
+  .info-line{display:flex;gap:12px;align-items:center;color:var(--muted);margin-top:8px}
+
+  .feedback{
+    margin-top:12px;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border:1px solid rgba(255,255,255,0.03);
+    color:#e6f6ff;
+  }
+
+  .hidden{display:none}
+
+  .result{
+    display:flex;justify-content:space-between;align-items:center;gap:12px
+  }
+  .score{font-size:20px;font-weight:900;color:var(--success)}
+
+  footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+  @media (max-width:820px){
+    .qa-top{flex-direction:column;align-items:flex-start}
+    .row{flex-wrap:wrap}
+    .wrap{padding:18px}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="card">
-    <h1>Voice Interview Simulator — Mechanical (3 companies)</h1>
-    <div class="small">Choose a company and press <strong>Start Interview</strong>. Use <strong>Record Answer</strong> to speak. Works offline in browser (no API keys).</div>
+  <div class="bg-anim"></div>
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
 
-    <div style="margin-top:12px" class="row">
-      <select id="companySelect">
-        <option value="Tata">Tata Motors (Automobile)</option>
-        <option value="Bosch">Bosch (Automation)</option>
-        <option value="Kirloskar">Kirloskar (Pumps & Fluid)</option>
-      </select>
-      <button id="startBtn" class="big">Start Interview</button>
-      <button id="restartBtn" class="secondary">Reset</button>
+  <div class="wrap">
+    <div class="card" id="topCard">
+      <header>
+        <div>
+          <h1>🔊 Voice Interview Simulator — Mechanical (AI look)</h1>
+          <div class="sub">Practice 3 companies with voice — works best in Chrome. New UI: animated AI background & glass cards.</div>
+        </div>
+        <div style="margin-left:auto" class="row">
+          <div class="pill" id="capability">Checking features...</div>
+        </div>
+      </header>
+
+      <div style="display:flex;gap:12px;align-items:center;margin-top:16px">
+        <label class="muted">Company</label>
+        <select id="companySelect">
+          <option value="Tata">Tata Motors</option>
+          <option value="Bosch">Bosch</option>
+          <option value="Kirloskar">Kirloskar</option>
+        </select>
+
+        <label class="muted" style="margin-left:8px">Questions</label>
+        <select id="numSelect">
+          <option value="5">5</option>
+          <option value="10">10</option>
+        </select>
+
+        <label style="display:flex;align-items:center;gap:6px;margin-left:6px" class="muted"><input id="shuffle" type="checkbox"> Shuffle</label>
+
+        <div style="margin-left:auto" class="row">
+          <button id="startBtn" class="btn">Start Interview</button>
+          <button id="resetBtn" class="btn ghost">Reset</button>
+        </div>
+      </div>
     </div>
 
-    <div id="qaArea" style="display:none;margin-top:12px">
-      <div class="question" id="questionText">Question will appear here...</div>
-      <div class="controls">
-        <button id="speakBtn" class="secondary">🔊 Speak Question</button>
-        <button id="recBtn" class="big">🎙️ Record Answer</button>
-        <button id="stopRecBtn" class="secondary">⏹ Stop</button>
-        <button id="evalBtn" class="secondary">✅ Evaluate (manual)</button>
+    <!-- QA area -->
+    <div id="qaCard" class="card hidden" style="margin-top:18px">
+      <div class="qa-top">
+        <div>
+          <div class="question" id="questionText">Question appears here</div>
+          <div class="info-line">
+            <div class="muted" id="qCount">Q1 / 5</div>
+            <div class="muted" id="liveStatus">Idle</div>
+            <div id="runningScore" class="muted" style="margin-left:12px">Score: 0 / 0</div>
+          </div>
+        </div>
+
+        <div style="margin-left:auto" class="row">
+          <button id="askBtn" class="btn ghost">🔊 Repeat</button>
+          <button id="hintBtn" class="btn ghost">Hint</button>
+          <button id="exampleBtn" class="btn ghost">Example</button>
+          <button id="skipBtn" class="btn ghost">Skip</button>
+        </div>
       </div>
 
-      <div class="info">Transcript (editable):</div>
-      <textarea id="transcript" placeholder="Transcript from mic will appear here — or type your answer and click Evaluate."></textarea>
+      <div class="controls" style="margin-top:14px">
+        <button id="recordBtn" class="btn">🎙️ Record</button>
+        <button id="stopBtn" class="btn ghost">⏹ Stop</button>
+        <button id="playBtn" class="btn ghost">▶️ Play</button>
+        <button id="dlBtn" class="btn ghost">⬇️ Download</button>
+        <button id="evalBtn" class="btn">✅ Evaluate</button>
+        <button id="nextBtn" class="btn ghost">Next</button>
+      </div>
 
-      <div id="feedback" class="feedback small" style="display:none"></div>
-      <div style="margin-top:12px" id="progress" class="small"></div>
-    </div>
+      <div style="margin-top:12px">
+        <div class="muted">Transcript (editable):</div>
+        <textarea id="transcript" placeholder="Speak or type your answer..."></textarea>
 
-    <div id="resultArea" style="display:none" class="card">
-      <div class="score" id="finalScore">Score: 0 / 0</div>
-      <div id="finalFeedback" class="small"></div>
-      <div style="margin-top:8px">
-        <button id="tryAgain" class="big">Practice Another Company</button>
+        <div id="feedback" class="feedback hidden"></div>
       </div>
     </div>
+
+    <!-- results -->
+    <div id="resultCard" class="card hidden" style="margin-top:18px">
+      <div class="result">
+        <div>
+          <div class="score" id="finalScore">Score: 0 / 0</div>
+          <div class="muted" id="resultComment">Summary</div>
+        </div>
+        <div class="row">
+          <button id="downloadJson" class="btn ghost">Download Session</button>
+          <button id="practiceBtn" class="btn">Practice Again</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <h3 style="margin:0 0 6px 0">Detailed feedback</h3>
+        <div id="detail" class="muted"></div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="muted">Tip: Use Chrome desktop. On CodePen open preview in <strong>Debug / Full Page</strong>. If mic blocked, click padlock → Site settings → Allow microphone.</div>
+    </footer>
   </div>
-</div>
 
 <script>
-/* ---------------------------
-  Simple client-side Interview App
-   - Uses SpeechSynthesis for TTS
-   - Uses WebkitSpeechRecognition for STT (Chrome)
-   - Keyword-based scoring
-----------------------------*/
-const companies = {
-  "Tata":[
+/* ---------- same app logic but unchanged from previous refactor ---------- */
+const QUESTION_BANK = {
+  "Tata": [
     {q:"Tell me about yourself and why you want to join Tata Motors?", keys:["motivation","automotive","team","design"], max:2},
     {q:"Explain the working principle of a 4-stroke SI engine.", keys:["intake","compression","power","exhaust"], max:3},
     {q:"What is the function of a differential in automobiles?", keys:["torque","wheels","speed","corner"], max:2},
-    {q:"How do you select material for a car chassis? What factors are important?", keys:["strength","weight","fatigue","cost","stiffness"], max:3},
-    {q:"Where do you see yourself in 5 years working with Tata Motors?", keys:["goals","learning","leadership","projects"], max:2}
+    {q:"How do you select material for a car chassis? Factors?", keys:["strength","weight","fatigue","cost","stiffness"], max:3},
+    {q:"Where do you see yourself in 5 years at Tata Motors?", keys:["goals","learning","leadership","projects"], max:2},
+    {q:"What is fatigue failure and how to prevent it?", keys:["fatigue","cycles","crack","shot peen","surface"], max:3},
+    {q:"Explain regenerative braking in hybrid vehicles.", keys:["regenerative","kinetic","battery","motor","recapture"], max:3},
+    {q:"What is suspension damping and why is it needed?", keys:["damping","spring","comfort","stability"], max:3},
+    {q:"How do you perform a simple FEA validation on a bracket?", keys:["mesh","boundary","loads","converge","stress"], max:3},
+    {q:"Explain the role of NVH in vehicle design.", keys:["noise","vibration","harshness","insulation","damping"], max:3}
   ],
   "Bosch":[
-    {q:"Introduce yourself and share one strength that makes you fit for Bosch.", keys:["automation","mechatronics","problem","solver","problem-solving"], max:2},
-    {q:"Explain the concept of mechatronics and its applications in manufacturing.", keys:["sensors","actuators","control","plc"], max:3},
-    {q:"What are PLCs, and why are they important in automation?", keys:["ladder","logic","control","reliability","i/o"], max:3},
-    {q:"What are the differences between hydraulic and pneumatic systems?", keys:["fluid","compressibility","force","speed","hydraulic","pneumatic"], max:3},
-    {q:"Why do you prefer Bosch over other automation companies?", keys:["innovation","quality","fit","projects","culture"], max:2}
+    {q:"Introduce yourself and one strength for Bosch.", keys:["automation","mechatronics","problem","team"], max:2},
+    {q:"What is mechatronics and its manufacturing applications?", keys:["sensors","actuators","control","plc"], max:3},
+    {q:"Explain PLC and its importance.", keys:["ladder","logic","control","i/o"], max:3},
+    {q:"Hydraulic vs pneumatic — differences?", keys:["fluid","compressibility","force","speed","hydraulic","pneumatic"], max:3},
+    {q:"Describe PID control basics.", keys:["proportional","integral","derivative","error"], max:3},
+    {q:"What is Industry 4.0?", keys:["iot","data","automation","smart","analytics"], max:3},
+    {q:"Types of sensors for position sensing?", keys:["encoder","potentiometer","hall","inductive"], max:2},
+    {q:"Difference between stepper and servo?", keys:["feedback","encoder","open-loop","closed-loop","precision"], max:3},
+    {q:"How to size a motor for a load?", keys:["torque","speed","safety","margin","power"], max:3},
+    {q:"Importance of safety standards in automation?", keys:["safety","iso","iec","risk","compliance"], max:2}
   ],
   "Kirloskar":[
-    {q:"Give a short introduction and why you want to join Kirloskar.", keys:["pumps","fluid","manufacturing","motivation"], max:2},
-    {q:"Explain the working principle of a centrifugal pump.", keys:["impeller","centrifugal","pressure","volute","flow"], max:3},
-    {q:"What is cavitation? How can it be prevented in pumps?", keys:["vapor","bubbles","npsh","impeller","design"], max:3},
-    {q:"What are the differences between IC engines and gas turbines?", keys:["combustion","moving parts","efficiency","rpm","turbine","engine"], max:3},
-    {q:"If selected, how would you contribute to the company’s growth?", keys:["projects","learning","efficiency","teamwork","improve"], max:2}
+    {q:"Short intro — why Kirloskar?", keys:["pumps","fluid","manufacturing","motivation"], max:2},
+    {q:"Explain working principle of a centrifugal pump.", keys:["impeller","centrifugal","pressure","volute","flow"], max:3},
+    {q:"What is cavitation and prevention methods?", keys:["vapor","bubbles","npsh","impeller","suction"], max:3},
+    {q:"IC engine vs gas turbine differences?", keys:["combustion","moving parts","rpm","efficiency","turbine"], max:3},
+    {q:"How to select a pump for an application?", keys:["flow","head","efficiency","npsh","viscosity"], max:3},
+    {q:"Explain pump affinity laws.", keys:["affinity","speed","flow","head","power"], max:3},
+    {q:"What is specific speed of a pump?", keys:["specific","speed","impeller","design"], max:2},
+    {q:"Diagnose vibration or overheating in a pump.", keys:["alignment","bearing","imbalance","cavitation","suction"], max:3},
+    {q:"Materials for impellers and why?", keys:["cast iron","stainless","bronze","corrosion","erosion"], max:2},
+    {q:"How to improve pump efficiency?", keys:["trim","vfd","speed","piping","maintenance"], max:3}
   ]
 };
 
-let company = null, qIndex = 0, score = 0, totalMax = 0;
+/* UI refs */
 const companySelect = document.getElementById('companySelect');
+const numSelect = document.getElementById('numSelect');
+const shuffleCheck = document.getElementById('shuffle');
 const startBtn = document.getElementById('startBtn');
-const restartBtn = document.getElementById('restartBtn');
-const qaArea = document.getElementById('qaArea');
+const resetBtn = document.getElementById('resetBtn');
+const qaCard = document.getElementById('qaCard');
 const questionText = document.getElementById('questionText');
-const recBtn = document.getElementById('recBtn');
-const stopRecBtn = document.getElementById('stopRecBtn');
-const speakBtn = document.getElementById('speakBtn');
+const askBtn = document.getElementById('askBtn');
+const hintBtn = document.getElementById('hintBtn');
+const exampleBtn = document.getElementById('exampleBtn');
+const skipBtn = document.getElementById('skipBtn');
+const recordBtn = document.getElementById('recordBtn');
+const stopBtn = document.getElementById('stopBtn');
+const playBtn = document.getElementById('playBtn');
+const dlBtn = document.getElementById('dlBtn');
+const evalBtn = document.getElementById('evalBtn');
+const nextBtn = document.getElementById('nextBtn');
 const transcriptEl = document.getElementById('transcript');
 const feedbackEl = document.getElementById('feedback');
-const evalBtn = document.getElementById('evalBtn');
-const progressEl = document.getElementById('progress');
-const resultArea = document.getElementById('resultArea');
-const finalScoreEl = document.getElementById('finalScore');
-const finalFeedbackEl = document.getElementById('finalFeedback');
-const tryAgain = document.getElementById('tryAgain');
+const liveStatus = document.getElementById('liveStatus');
+const qCount = document.getElementById('qCount');
+const runningScore = document.getElementById('runningScore');
+const capability = document.getElementById('capability');
+const resultCard = document.getElementById('resultCard');
+const finalScore = document.getElementById('finalScore');
+const resultComment = document.getElementById('resultComment');
+const detail = document.getElementById('detail');
+const downloadJson = document.getElementById('downloadJson');
+const practiceBtn = document.getElementById('practiceBtn');
 
-function speak(text){
-  if(!("speechSynthesis" in window)) return alert("TTS not supported in this browser.");
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'en-US';
-  speechSynthesis.cancel();
-  speechSynthesis.speak(u);
-}
+/* state */
+let list = [];
+let session = {company:'', questions:[], answers:[], total:0, score:0};
+let idx = 0;
+let recognition = null;
+let recognizing = false;
+let mediaRecorder = null;
+let recordedChunks = [];
+let currentAudioURL = null;
 
-// STT: WebKitSpeechRecognition (Chrome)
-let recog = null, recognizing = false;
-if(('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window)){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recog = new SR();
-  recog.lang = 'en-IN';
-  recog.interimResults = false;
-  recog.maxAlternatives = 1;
-  recog.onstart = ()=>{recognizing = true; recBtn.textContent = "Recording..."; recBtn.disabled = true; stopRecBtn.disabled = false;}
-  recog.onend = ()=>{recognizing = false; recBtn.disabled = false; recBtn.textContent = "🎙️ Record Answer"; stopRecBtn.disabled = true;}
-  recog.onerror = (e)=>{console.log('STT error',e); recognizing=false; recBtn.disabled=false; stopRecBtn.disabled=true}
-  recog.onresult = (ev)=>{ const text = ev.results[0][0].transcript; transcriptEl.value = text; }
-}
-
-startBtn.onclick = ()=>{
-  company = companySelect.value;
-  qIndex = 0; score = 0; totalMax = 0;
-  qaArea.style.display = 'block';
-  resultArea.style.display = 'none';
-  feedbackEl.style.display = 'none';
-  transcriptEl.value = '';
-  loadQuestion();
+/* feature detection & capability indicator */
+const supports = {
+  recognition: !!(window.SpeechRecognition || window.webkitSpeechRecognition),
+  tts: 'speechSynthesis' in window,
+  media: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+  mediaRecorder: !!window.MediaRecorder
 };
+capability.textContent = [
+  supports.tts ? 'TTS ✓' : 'TTS ✗',
+  supports.recognition ? 'STT ✓' : 'STT ✗ (Chrome only)',
+  supports.media ? 'Mic ✓' : 'Mic ✗',
+  supports.mediaRecorder ? 'Record ✓' : 'Record ✗'
+].join(' · ');
 
-restartBtn.onclick = resetAll;
-tryAgain.onclick = resetAll;
-
-function resetAll(){
-  qaArea.style.display = 'none';
-  resultArea.style.display = 'none';
-  company=null; qIndex=0; score=0; totalMax=0;
-  transcriptEl.value='';
-  feedbackEl.style.display='none';
-  speechSynthesis.cancel();
+/* permissions info - best effort */
+if(navigator.permissions && navigator.permissions.query){
+  navigator.permissions.query({name:'microphone'}).then(r => {
+    if(r && r.state) {
+      // show permission briefly inside capability area
+      capability.textContent += ` · Mic:${r.state}`;
+    }
+  }).catch(()=>{});
 }
 
-function loadQuestion(){
-  const arr = companies[company];
-  if(qIndex >= arr.length){
-    finishInterview(); return;
-  }
-  const item = arr[qIndex];
-  questionText.textContent = `Q${qIndex+1}. ${item.q}`;
-  progressEl.textContent = `Question ${qIndex+1} of ${arr.length} — Current score: ${score}`;
-  // speak question
-  speak(item.q);
-  // clear previous transcript & feedback
-  transcriptEl.value = '';
-  feedbackEl.style.display = 'none';
-  // compute total max
-  totalMax = arr.reduce((s,it)=>s+it.max,0);
+/* recognition init */
+function initRecognition(){
+  try{
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR) return;
+    recognition = new SR();
+    recognition.lang = 'en-IN';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = ()=>{ recognizing = true; liveStatus.textContent='Listening...'; recordBtn.disabled=true; stopBtn.disabled=false; };
+    recognition.onend = ()=>{ recognizing = false; liveStatus.textContent='Idle'; recordBtn.disabled=false; stopBtn.disabled=true; };
+    recognition.onerror = (e)=>{ console.warn('recognition error', e); liveStatus.textContent='STT error'; recognizing=false; recordBtn.disabled=false; stopBtn.disabled=true; };
+    recognition.onresult = ev => {
+      const t = ev.results[0][0].transcript || '';
+      transcriptEl.value = t;
+    };
+  }catch(e){ recognition = null; console.warn(e); }
+}
+if(supports.recognition) initRecognition();
+
+/* recorder init */
+async function initRecorder(){
+  if(!supports.media) return null;
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    try {
+      mediaRecorder = new MediaRecorder(stream, {mimeType:'audio/webm;codecs=opus'});
+    } catch(e){
+      mediaRecorder = new MediaRecorder(stream);
+    }
+    mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: recordedChunks[0]?.type || 'audio/webm' });
+      if(currentAudioURL) URL.revokeObjectURL(currentAudioURL);
+      currentAudioURL = URL.createObjectURL(blob);
+      playBtn.disabled = false; dlBtn.disabled = false;
+      if(session.answers[idx]) session.answers[idx].audio = blob;
+    };
+    return mediaRecorder;
+  }catch(e){ console.warn('recorder init failed', e); mediaRecorder=null; return null; }
 }
 
-recBtn.onclick = ()=>{
-  if(!recog) return alert("Speech Recognition not supported in this browser. Use Chrome or type your answer and press Evaluate.");
-  transcriptEl.value = '';
-  try{recog.start();}catch(e){console.warn(e); }
-};
+/* helpers */
+function speak(text){ if(!supports.tts) return; window.speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang='en-IN'; window.speechSynthesis.speak(u); }
+function shuffle(a){ const b=a.slice(); for(let i=b.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [b[i],b[j]]=[b[j],b[i]] } return b; }
+function esc(s){ if(!s) return ''; return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
 
-stopRecBtn.onclick = ()=>{
-  if(recog && recognizing){ recog.stop(); }
-};
+/* flow */
+startBtn.addEventListener('click', async ()=>{
+  const c = companySelect.value;
+  let bank = QUESTION_BANK[c].slice();
+  const n = parseInt(numSelect.value,10) || 5;
+  if(shuffleCheck.checked) bank = shuffle(bank);
+  list = bank.slice(0,n);
+  session = {company:c, questions:list.map(x=>x.q), answers: Array(n).fill(null).map(()=>({transcript:'',score:0,feedback:'',audio:null})), total:list.reduce((s,i)=>s+i.max,0), score:0};
+  idx = 0;
+  if(supports.media) await initRecorder();
+  qaCard.classList.remove('hidden'); resultCard.classList.add('hidden');
+  renderQuestion();
+});
 
-// Manual evaluate button
-evalBtn.onclick = () => evaluateAnswer(transcriptEl.value.trim());
+resetBtn.addEventListener('click', ()=> location.reload());
 
-speakBtn.onclick = ()=> speak(questionText.textContent.replace(/^Q\d+\.\s*/,''));
+function renderQuestion(){
+  if(idx >= list.length){ finish(); return; }
+  const it = list[idx];
+  questionText.textContent = `Q${idx+1}. ${it.q}`;
+  qCount.textContent = `Q${idx+1} / ${list.length}`;
+  runningScore.textContent = `Score: ${session.score} / ${session.total}`;
+  transcriptEl.value = session.answers[idx].transcript || '';
+  feedbackEl.classList.add('hidden');
+  liveStatus.textContent = 'Idle';
+  playBtn.disabled = !currentAudioURL && !session.answers[idx].audio;
+  dlBtn.disabled = !currentAudioURL && !session.answers[idx].audio;
+  stopBtn.disabled = true;
+}
 
-function evaluateAnswer(text){
-  if(!text) return alert("Please record or type your answer first.");
-  const arr = companies[company];
-  const item = arr[qIndex];
-  const ans = text.toLowerCase();
-  let qscore = 0;
-  // For each keyword, add fractional points; cap at item.max
-  const keys = item.keys;
+askBtn.addEventListener('click', ()=> speak(list[idx].q));
+hintBtn.addEventListener('click', ()=> {
+  const keys = list[idx].keys.join(', ');
+  feedbackEl.classList.remove('hidden'); feedbackEl.innerHTML = `<strong>Hint:</strong> include: ${esc(keys)}`;
+});
+exampleBtn.addEventListener('click', ()=> {
+  feedbackEl.classList.remove('hidden'); feedbackEl.innerHTML = `<strong>Example:</strong> Give a short structured answer: definition → how it works → why important.`;
+});
+skipBtn.addEventListener('click', ()=> {
+  session.answers[idx].transcript = transcriptEl.value || '';
+  session.answers[idx].score = 0; session.answers[idx].feedback = 'Skipped';
+  nextQuestion();
+});
+
+recordBtn.addEventListener('click', async ()=>{
+  if(recognition){ try{ recognition.start(); } catch(e){ console.warn(e); } }
+  if(mediaRecorder){ recordedChunks = []; try{ mediaRecorder.start(); liveStatus.textContent='Recording (audio)'; }catch(e){ console.warn(e); } }
+  recordBtn.disabled=true; stopBtn.disabled=false; playBtn.disabled=true; dlBtn.disabled=true;
+});
+
+stopBtn.addEventListener('click', ()=> {
+  if(recognition && recognizing){ try{ recognition.stop(); } catch(e){} }
+  if(mediaRecorder && mediaRecorder.state === 'recording'){ mediaRecorder.stop(); }
+  recordBtn.disabled=false; stopBtn.disabled=true;
+  liveStatus.textContent='Idle';
+  session.answers[idx].transcript = transcriptEl.value.trim();
+});
+
+playBtn.addEventListener('click', ()=> {
+  if(!currentAudioURL && session.answers[idx].audio) currentAudioURL = URL.createObjectURL(session.answers[idx].audio);
+  if(currentAudioURL){ const a=new Audio(currentAudioURL); a.play(); }
+});
+dlBtn.addEventListener('click', ()=> {
+  const blob = session.answers[idx].audio;
+  if(!blob) return alert('No recording for this question');
+  const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`answer_q${idx+1}.webm`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+});
+
+evalBtn.addEventListener('click', ()=> {
+  const txt = (transcriptEl.value || '').toLowerCase();
+  if(!txt) return alert('Please record or type your answer first.');
+  const keys = list[idx].keys || [];
   let matched = 0;
   for(const k of keys){
-    // handle synonyms or multi-word keys: check each token in k split by |
-    const parts = k.split('|').map(p=>p.trim());
-    for(const p of parts){
-      if(p && ans.includes(p)) { matched++; break; }
-    }
+    const parts = k.split('|').map(s=>s.trim());
+    for(const p of parts){ if(p && txt.includes(p)){ matched++; break; } }
   }
-  // score proportional to matched / keys.length * max
-  qscore = Math.round((matched / keys.length) * item.max);
-  // small bonus if answer length is long (encourages detail) — optional
-  if(ans.split(/\s+/).length > 25 && qscore < item.max) qscore = Math.min(item.max, qscore+1);
+  let qscore = Math.round((matched / keys.length) * list[idx].max);
+  if(txt.split(/\s+/).length > 20 && qscore < list[idx].max) qscore = Math.min(list[idx].max, qscore+1);
+  const missing = keys.filter(k => !k.split('|').some(p => txt.includes(p)));
+  const fb = `Scored ${qscore}/${list[idx].max}. Missing: ${missing.join(', ') || 'None'}`;
+  feedbackEl.classList.remove('hidden'); feedbackEl.innerHTML = `<strong>Feedback:</strong> ${esc(fb)}`;
+  session.answers[idx].transcript = transcriptEl.value.trim();
+  session.answers[idx].score = qscore;
+  session.answers[idx].feedback = fb;
+  session.score = session.answers.reduce((s,a)=>s+(a.score||0),0);
+  runningScore.textContent = `Score: ${session.score} / ${session.total}`;
+});
 
-  score += qscore;
-  // feedback generation
-  const missing = keys.filter(k=>{
-    const parts = k.split('|').map(p=>p.trim());
-    return !parts.some(p=>ans.includes(p));
+nextBtn.addEventListener('click', ()=> {
+  session.answers[idx].transcript = transcriptEl.value.trim();
+  if(session.answers[idx].audio == null && recordedChunks.length > 0){
+    const blob = new Blob(recordedChunks, { type: recordedChunks[0].type || 'audio/webm' });
+    session.answers[idx].audio = blob;
+  }
+  idx++;
+  currentAudioURL && URL.revokeObjectURL(currentAudioURL); currentAudioURL=null;
+  if(idx < list.length) renderQuestion(); else finish();
+});
+
+function nextQuestion(){ idx++; if(idx < list.length) renderQuestion(); else finish(); }
+
+function finish(){
+  qaCard.classList.add('hidden'); resultCard.classList.remove('hidden');
+  finalScore.textContent = `Score: ${session.score} / ${session.total}`;
+  const pct = Math.round((session.score/session.total)*100 || 0);
+  resultComment.textContent = pct >= 80 ? 'Excellent' : pct >= 60 ? 'Good' : pct >= 40 ? 'Fair' : 'Needs practice';
+  detail.innerHTML = '';
+  session.answers.forEach((a,i)=> {
+    const q = session.questions[i];
+    const s = `<div style="margin-bottom:12px"><strong>Q${i+1}.</strong> ${esc(q)}<div class="muted" style="margin-top:6px"><strong>Answer:</strong> ${esc(a.transcript || '')}</div><div style="margin-top:6px"><strong>Feedback:</strong> ${esc(a.feedback || '')} <span style="margin-left:10px">(${a.score||0})</span></div></div>`;
+    detail.innerHTML += s;
   });
-  let fb = `You scored ${qscore}/${item.max} on this question.`;
-  if(missing.length===0) fb += " Good — you covered all key points.";
-  else fb += ` Try to mention: ${missing.slice(0,4).join(', ')}.`;
-
-  feedbackEl.style.display = 'block';
-  feedbackEl.innerHTML = `<strong>Feedback:</strong> ${fb}`;
-  progressEl.textContent = `Answered Q${qIndex+1}. Score now: ${score} / ${totalMax}`;
-  // speak feedback
-  speak(fb);
-
-  // next question after a short delay
-  qIndex++;
-  setTimeout(()=> loadQuestion(), 1300);
+  speak(`Interview finished. Your score is ${session.score} out of ${session.total}.`);
 }
 
-function finishInterview(){
-  qaArea.style.display = 'none';
-  resultArea.style.display = 'block';
-  finalScoreEl.textContent = `Score: ${score} / ${totalMax}`;
-  let comment = '';
-  const percent = (totalMax>0)? Math.round((score/totalMax)*100) : 0;
-  if(percent>=80) comment = "Excellent performance — strong answers!";
-  else if(percent>=60) comment = "Good — a little more detail and you'll be ready.";
-  else if(percent>=40) comment = "Fair — practice improving technical depth.";
-  else comment = "Practice more: try to cover keywords and give structured answers.";
+/* download session */
+downloadJson.addEventListener('click', ()=> {
+  const data = JSON.stringify({meta:{company:session.company,total:session.total,score:session.score},answers:session.answers}, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='session.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+});
 
-  finalFeedbackEl.textContent = `${comment} (${percent}%) — Review the feedback for each question while practicing.`;
-  speak(`Interview finished. Your score is ${score} out of ${totalMax}. ${comment}`);
-}
+practiceBtn.addEventListener('click', ()=> { session = {company:'',questions:[],answers:[],total:0,score:0}; list=[]; idx=0; qaCard.classList.add('hidden'); resultCard.classList.add('hidden'); });
 
-/* quick hotkeys for convenience */
-document.addEventListener('keydown',(e)=>{
-  if(e.key==='r' && qaArea.style.display!=='none') recBtn.click();
-  if(e.key==='s') stopRecBtn.click();
+/* initialize UI state */
+document.addEventListener('DOMContentLoaded', ()=> {
+  stopBtn.disabled = true;
+  playBtn.disabled = true;
+  dlBtn.disabled = true;
 });
 </script>
 </body>
